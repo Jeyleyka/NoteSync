@@ -1,0 +1,46 @@
+#include "NoteManager.h"
+
+#include "../Note/Note.h"
+
+NoteManager::NoteManager() {}
+
+const Note& NoteManager::add(const std::string& title, const std::string& content) {
+    auto newNote = std::make_unique<Note>(title, content);
+    auto id = newNote->id;
+    this->notes.emplace(id, std::move(newNote));
+    return *this->notes.at(id);
+}
+
+bool NoteManager::remove(const std::string& id) {
+    return this->notes.erase(id) > 0;
+}
+
+bool NoteManager::update(const std::string& id, const std::string& newTitle, const std::string& newContent) {
+    auto it = this->notes.find(id);
+
+    if (it == this->notes.end()) {
+        qDebug() << "note not updated\n";
+        return false;
+    }
+
+    auto& note = it->second;
+    note->title = newTitle;
+    note->content = newContent;
+    return true;
+}
+
+std::vector<std::reference_wrapper<Note>> NoteManager::getAll() {
+    std::vector<std::reference_wrapper<Note>> res;
+    res.reserve(this->notes.size());
+
+    for (auto& [id, note] : this->notes)
+        res.push_back(*note);
+
+    return res;
+}
+
+std::optional<std::reference_wrapper<const Note>> NoteManager::getNote(const std::string& id) {
+    auto it = this->notes.find(id);
+    if (it == this->notes.end()) return std::nullopt;
+    return *it->second;
+}
