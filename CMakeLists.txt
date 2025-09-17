@@ -28,6 +28,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         UI/Header/Header.h UI/Header/Header.cpp
         UI/CategoriesList/CategoriesList.h UI/CategoriesList/CategoriesList.cpp
         UI/Editor/Editor.h UI/Editor/Editor.cpp
+        Persistance/DatabaseWorker/DatabaseWorker.h Persistance/DatabaseWorker/DatabaseWorker.cpp
 
 
 

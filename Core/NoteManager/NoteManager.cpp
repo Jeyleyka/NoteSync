@@ -5,6 +5,7 @@
 NoteManager::NoteManager() {}
 
 const Note& NoteManager::add(const std::string& title, const std::string& content) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     auto newNote = std::make_unique<Note>(title, content);
     auto id = newNote->id;
     this->notes.emplace(id, std::move(newNote));
@@ -30,6 +31,7 @@ bool NoteManager::update(const std::string& id, const std::string& newTitle, con
 }
 
 std::vector<std::reference_wrapper<Note>> NoteManager::getAll() {
+    std::lock_guard<std::mutex> lock(m_mutex);
     std::vector<std::reference_wrapper<Note>> res;
     res.reserve(this->notes.size());
 

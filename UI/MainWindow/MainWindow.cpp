@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
         QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(note.title));
         item->setData(Qt::UserRole, QString::fromStdString(note.id));
 
-        db.insertNoteInDB(QString::fromStdString(note.id), QString::fromStdString(note.title), QString::fromStdString(note.content));
+        db.insertNoteToDB(QString::fromStdString(note.id), QString::fromStdString(note.title), QString::fromStdString(note.content));
 
         this->noteList->addItem(item);
         this->noteList->setCurrentItem(item);
@@ -46,6 +46,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     // === Center (list of notes) ===
     this->noteList = new NotesList(this);
+
+    connect(this->noteList, &NotesList::itemDoubleClicked, this, [this](QListWidgetItem* item) {
+        this->editor->setText(item->text());
+    });
 
     // === Right (editor) ===
     this->editor = new Editor(this);

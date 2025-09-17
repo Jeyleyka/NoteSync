@@ -17,7 +17,6 @@ public:
     bool isOpen() const;
     QSqlDatabase database() const;
     bool init();
-    bool insertNoteInDB(const QString& id, const QString& title, const QString& content);
 
 private:
     Database();

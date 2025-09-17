@@ -1,0 +1,50 @@
+#include "DatabaseWorker.h"
+
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QVariant>
+#include <QDebug>
+
+DatabaseWorker::DatabaseWorker(Database& database) : db(database) {}
+
+bool DatabaseWorker::addNote(const Note& note) {
+    QSqlQuery query;
+    query.prepare("INSERT INTO notes (id, title, content, created_at, modified_at) VALUES (?,?,?, datetime('now'), datetime('now'))");
+
+    query.addBindValue(QString::fromStdString(note.id));
+    query.addBindValue(QString::fromStdString(note.title));
+    query.addBindValue(QString::fromStdString(note.content));
+
+    if (!query.exec()) {
+        qDebug() << "Insert failed: " << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+std::vector<Note> DatabaseWorker::getAllNotes() {
+    std::vector<Note> notes;
+    QSqlQuery query(db.database());
+    query.exec("SELECT id, title, content FROM notes");
+    
+    while (query.next()) {
+        Note note(
+            query.value(1).toString().toStdString();
+            query.value(2).toString().toStdString();
+        );
+        note.id = query.value(0)
+    }
+}
+
+bool DatabaseWorker::updateNote(const Note& note) {
+    
+}
+
+bool DatabaseWorker::removeNote(const std::string& id) {
+    
+}
+
+std::optional<Note> DatabaseWorker::getNoteById(const std::string& id) {
+    
+}
