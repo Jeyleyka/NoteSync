@@ -11,6 +11,9 @@ public:
     explicit Header(QWidget *parent = nullptr);
     QToolBar* getToolBar() const { return toolBar; }
 
+signals:
+    void onAddNote();
+
 private:
     QToolBar* toolBar;
 };

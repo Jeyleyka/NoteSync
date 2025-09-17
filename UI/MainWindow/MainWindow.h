@@ -8,6 +8,8 @@
 #include "../../Persistance/Database/Database.h"
 #include "../NotesList/NotesList.h"
 #include "../Editor/Editor.h"
+#include "../../Core/Note/Note.h"
+#include "../../Core/NoteManager/NoteManager.h"
 
 class MainWindow : public QMainWindow
 {
@@ -18,6 +20,7 @@ public:
     ~MainWindow();
 
 private:
+    NoteManager noteManager;
     Header* header;
     CategoriesList* catList;
     NotesList* noteList;

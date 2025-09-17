@@ -21,6 +21,26 @@ MainWindow::MainWindow(QWidget *parent)
     this->header = new Header(this);
     this->addToolBar(header->getToolBar());
 
+    connect(this->header, &Header::onAddNote, this, [this] {
+        Database& db = Database::instance();
+
+        std::string content = this->editor->toPlainText().toStdString();
+
+        QStringList lines = this->editor->toPlainText().split("\n");
+        std::string title = lines.isEmpty() ? "Untitled" : lines[0].toStdString();
+
+        const Note& note = noteManager.add(title, content);
+
+        QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(note.title));
+        item->setData(Qt::UserRole, QString::fromStdString(note.id));
+
+        db.insertNoteInDB(QString::fromStdString(note.id), QString::fromStdString(note.title), QString::fromStdString(note.content));
+
+        this->noteList->addItem(item);
+        this->noteList->setCurrentItem(item);
+        this->editor->clear();
+    });
+
     // === Sidebar (categories) ===
     this->catList = new CategoriesList(this);
 

@@ -54,3 +54,19 @@ bool Database::init() {
 
     return true;
 }
+
+bool Database::insertNoteInDB(const QString& id, const QString& title, const QString& content) {
+    QSqlQuery query;
+    query.prepare("INSERT INTO notes (id, title, content, created_at, modified_at) VALUES (?,?,?, datetime('now'), datetime('now'))");
+
+    query.addBindValue(id);
+    query.addBindValue(title);
+    query.addBindValue(content);
+
+    if (!query.exec()) {
+        qDebug() << "Insert failed: " << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
