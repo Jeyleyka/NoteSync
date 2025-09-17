@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Sql)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Sql)
 set(PROJECT_SOURCES
         main.cpp
         UI/MainWindow/MainWindow.cpp
@@ -23,6 +23,14 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
         Core/Note/Note.h Core/Note/Note.cpp
         Core/NoteManager/NoteManager.h Core/NoteManager/NoteManager.cpp
+        Persistance/Database/Database.h Persistance/Database/Database.cpp
+        UI/NotesList/NotesList.h UI/NotesList/NotesList.cpp
+        UI/Header/Header.h UI/Header/Header.cpp
+        UI/CategoriesList/CategoriesList.h UI/CategoriesList/CategoriesList.cpp
+        UI/Editor/Editor.h UI/Editor/Editor.cpp
+
+
+
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET NoteSync APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -42,7 +50,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(NoteSync PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(NoteSync PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt6::Sql)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

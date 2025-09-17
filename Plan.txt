@@ -1,0 +1,330 @@
+1. Ядро данных: модель заметки и менеджер (Core)
+
+Цель: реализовать чистую модель Note и NoteManager (бизнес-логику) без UI.
+
+Задачи:
+
+Note (структура/класс): поля id (UUID/QString), title, content, createdAt, modifiedAt, tags.
+
+Реализовать move-конструктор/оператор (практика move semantic).
+
+NoteManager — класс, который хранит коллекцию заметок и предоставляет API: add, remove, update, getAll, find.
+
+Хранение: std::vector<std::shared_ptr<Note>> или std::map<std::string, std::shared_ptr<Note>>.
+
+Технологии:
+
+Std lib: std::shared_ptr, std::unique_ptr, std::mutex.
+
+Для UUID: QUuid (если в Qt) или boost::uuids.
+
+C++ фишки:
+
+умные указатели (unique_ptr/shared_ptr), move-семантика, [[nodiscard]] на методах, noexcept там где возможно.
+
+Пример Note (с move):
+
+struct Note {
+    std::string id;
+    std::string title;
+    std::string content;
+    std::chrono::system_clock::time_point createdAt;
+    std::chrono::system_clock::time_point modifiedAt;
+
+    Note(std::string t = {}, std::string c = {})
+      : id(generate_id()), title(std::move(t)), content(std::move(c)),
+        createdAt(std::chrono::system_clock::now()), modifiedAt(createdAt) {}
+
+    Note(Note&&) noexcept = default;
+    Note& operator=(Note&&) noexcept = default;
+    // copy ops — по желанию
+};
+
+
+Deliverable: набор юнит-тестов для NoteManager (Добавление/удаление/поиск).
+
+2. Сериализация / Персистентность (Storage)
+
+Цель: сохранять/загружать заметки локально (JSON и/или SQLite).
+
+Задачи:
+
+Реализовать IStorage интерфейс (saveAll(), loadAll()).
+
+Реализация 1: JsonStorage — использовать nlohmann::json (vcpkg).
+
+Реализация 2 (опционально): SQLiteStorage — использовать SQLiteCpp или QtSql для SQLite.
+
+Технологии:
+
+nlohmann::json или QJson*/QtSql.
+
+RAII: файл (std::ofstream) закрывается в деструкторе.
+
+C++ фишки:
+
+std::optional для безопасного чтения/возврата ошибок.
+
+Исключения для ошибок I/O (обрабатывать и логировать).
+
+Пример JSON:
+
+nlohmann::json j;
+for (auto& n : notes) {
+    j.push_back({{"id", n->id}, {"title", n->title}, {"content", n->content}});
+}
+std::ofstream out("notes.json");
+out << j.dump(2);
+
+
+Deliverable: загрузка при старте, сохранение при ручном действии.
+
+3. Базовый UI (Qt): список заметок + редактор
+
+Цель: сделать рабочее окно: список заголовков + поле редактирования.
+
+Задачи:
+
+Создать MainWindow (QMainWindow): слева QListWidget, справа QTextEdit, сверху toolbar с Add/Delete/Save.
+
+Подключить NoteManager к UI: при клике на заголовок показывать текст; редактирование сохраняет в NoteManager.
+
+Обратить внимание на Qt parenting (UI-объекты управляются Qt — не использовать raw new без parent).
+
+Технологии:
+
+Qt Widgets (QListWidget, QTextEdit, QAction).
+
+C++ фишки:
+
+Сигналы/слоты (Qt) и лямбда-переходы (connect(..., [this]{...})).
+
+Использовать std::shared_ptr<Note> для модели, но в UI хранить просто индекс/ID.
+
+Deliverable: рабочий MVP GUI.
+
+4. Автосохранение и многопоточность
+
+Цель: не блокировать UI при сохранении и при тяжёлых операциях (поиск, синхронизация).
+
+Задачи:
+
+Реализовать фоновых воркер AutosaveWorker:
+
+Использовать std::thread / std::jthread (C++20) или std::async.
+
+У NoteManager сделать защищённый mutex (std::mutex notesMutex).
+
+Worker периодически (или по флагу dirty) вызывает storage->saveAll().
+
+При завершении приложения корректно дождаться join (RAII wrapper).
+
+Для поиска: вынести поиск в отдельный поток и возвращать результат через std::future или через Qt (emit signal with results) — использовать Qt::QueuedConnection для безопасной отправки в UI поток.
+
+Технологии:
+
+std::thread, std::mutex, std::condition_variable, std::future/std::promise.
+
+Можно использовать boost::asio::thread_pool как пул потоков.
+
+C++ фишки:
+
+Thread-safety, RAII-менеджмент потоков (обёртка), noexcept и детектирование прекращения.
+
+Пример (псевдокод autosave):
+
+std::atomic<bool> stop{false};
+std::thread autosave([&](){
+    while(!stop){
+        std::unique_lock lk(mutex);
+        cv.wait_for(lk, std::chrono::seconds(10));
+        storage->saveAll(notes);
+    }
+});
+// при закрытии:
+stop = true; cv.notify_all(); autosave.join();
+
+
+Deliverable: автосохранение без "лагов" UI.
+
+5. Поиск и индексация (параллельно с автосохранением)
+
+Цель: быстрый поиск по тексту заметок (асинхронный и отзывчивый).
+
+Задачи:
+
+Реализовать поиск по ключевым словам (full-text простая реализация: std::string::find) или подключить FTS (SQLite FTS).
+
+Поиск в фоне (worker), результаты применять в UI через queued signal.
+
+Технологии:
+
+Если SQLite — использовать FTS5 (быстро, полнотекстовый поиск).
+
+Если JSON — делать параллельный перебор с std::async.
+
+C++ фишки:
+
+std::async + futures; atomics; noexcept for small helper functions.
+
+Deliverable: строка поиска в UI, результаты отображаются без зависания.
+
+6. Синхронизация (опционально): REST API + авторизация
+
+Цель: дать возможность синхронизировать заметки между устройствами.
+
+Варианты:
+
+Вариант A (быстрее для интеграции с Qt): использовать QNetworkAccessManager — асинхронный HTTP клиент, удобно работает с Qt event loop.
+
+Вариант B (чистый C++): использовать Boost.Asio/Beast (http) в отдельном потоке (требует больше усилий).
+
+Задачи:
+
+Создать SyncService в отдельном потоке: push/pull API, conflict resolution (timestamp-based).
+
+Авторизация: токен (Bearer) хранить безопасно (keychain/защита локального хранилища).
+
+Объединение: при push/pull учитывать modifiedAt.
+
+Технологии:
+
+QNetworkAccessManager (recommended for Qt UI).
+
+JSON (nlohmann) для payload.
+
+При использовании Boost.Asio: thread pool + use_future or callbacks.
+
+C++ фишки:
+
+Асинхронная работа, безопасное взаимодействие потоков, exception handling в сетевых задачах.
+
+Deliverable: кнопка "Sync", лог синхронизации, простейший conflict resolution.
+
+7. Telegram-бот (интеграция) — опция
+
+Цель: управление заметками через Telegram (создать, увидеть список, получить/добавить заметки).
+
+Задачи:
+
+Отдельный бинарник или встроенный сервис (рекомендуется отдельный процесс).
+
+Использовать tgbot-cpp (в vcpkg), реализовать команды: /list, /get <id>, /add <title> (бот присылает инструкции).
+
+Коммуникация бота и приложения: через серверный API (локальный REST) или через общий storage (например, SQLite файл).
+
+Технологии:
+
+tgbot-cpp, SQLite/JSON, optional: JWT для аутентификации.
+
+C++ фишки:
+
+Конкурентный доступ к storage (mutex), shared pointers, using std::function callbacks.
+
+Deliverable: бот, который умеет добавлять и получать заметки.
+
+8. Юнит-тесты и CI
+
+Цель: покрыть логику тестами и настроить автоматическую сборку.
+
+Задачи:
+
+Подключить GoogleTest / Catch2 (vcpkg).
+
+Писать тесты для NoteManager, JsonStorage, search.
+
+Настроить GitHub Actions / GitLab CI: CMake configure → build → tests.
+
+Технологии:
+
+GoogleTest, GitHub Actions.
+
+C++ фишки:
+
+тестирование контрактов, использование constexpr и static_assert по мере необходимости.
+
+Deliverable: pipeline, прогон тестов при PR.
+
+9. UI polishing и UX-фичи
+
+Цель: сделать приложение удобным и красивым.
+
+Задачи:
+
+Автодополнение тегов, drag-n-drop, контекстное меню, экспорт в Markdown/PDF.
+
+Настройки: тема (свет/тёмная), путь к хранилищу, частота автосейва.
+
+Добавить индикатор статуса синхронизации, прогресс-бар.
+
+Технологии:
+
+Qt stylesheets, QActions, QProgressBar, QSettings для конфигов.
+
+C++ фишки:
+
+Singleton pattern для конфигурации (с умным указателем), noexcept, thread-safe lazy init.
+
+10. Packaging, дистрибуция
+
+Цель: подготовить сборку для пользователей.
+
+Задачи:
+
+Windows: MSIX/installer or InnoSetup; Linux: deb/rpm/AppImage; macOS: dmg.
+
+Использовать CPack (CMake) или Qt Installer Framework.
+
+Включить зависимые DLL (Qt libs) или сделать статическую сборку.
+
+Deliverable: установщик/архив для платформы.
+
+Где в проекте изучать ключевые C++ темы (карта практики)
+
+Smart pointers — NoteManager container, ownership моделей заметок.
+
+RAII — Storage (файлы), DB connection wrapper, thread guard.
+
+Move semantics — класс Note и операции над большими строками.
+
+Multithreading — autosave, поиск, sync; practice with mutex, cv, futures.
+
+Templates / Generic — generic storage adapters, сериализаторы (to_json<T>, from_json<T>).
+
+std::optional / std::variant — возвращать optional<Note> при поиске; variant для разных типов содержимого.
+
+noexcept — помечать операции, которые не кидают (move ctor и т.д.).
+
+Exceptions handling — работа со storage/network: ловить и логировать.
+
+Unit testing — покрыть ядро тестами.
+
+Modern C++ utilities — std::span, std::string_view для производительности.
+
+Практические советы / архитектурные решения
+
+Разделяй слои: UI (Qt) ↔ Core (NoteManager/Storage) ↔ Services (Sync/Bot). Используй интерфейсы (abstractions) для хранилищ.
+
+Коммуникация потоков и UI: в Qt — отдавать результаты в UI через signals/slots с Qt::QueuedConnection или QMetaObject::invokeMethod.
+
+Логирование: подключи spdlog — поможет в отладке (vcpkg).
+
+Конфликты при sync: реализуй простую стратегию last-writer-wins с возможностью ручного просмотра.
+
+Документируй код — Doxygen-совместимые комментарии для публичных API.
+
+Примерный набор зависимостей (vcpkg)
+
+qt6 (Qt через официальный установщик)
+
+nlohmann-json
+
+spdlog
+
+SQLiteCpp (или использовать QtSql)
+
+boost-uuid (опционально)
+
+tgbot-cpp (если бот)
+
+googletest (для тестов)
