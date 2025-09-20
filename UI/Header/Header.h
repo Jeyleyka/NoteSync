@@ -13,6 +13,7 @@ public:
 
 signals:
     void onAddNote();
+    void onRemoveNote();
 
 private:
     QToolBar* toolBar;

@@ -21,8 +21,48 @@ MainWindow::MainWindow(QWidget *parent)
     this->header = new Header(this);
     this->addToolBar(header->getToolBar());
 
+    // === Sidebar (categories) ===
+    this->catList = new CategoriesList(this);
+
+    // === Center (list of notes) ===
+    this->noteList = new NotesList(this);
+
+    connect(this->noteList, &NotesList::itemDoubleClicked, this, [this](QListWidgetItem* item) {
+        this->editor->setText(item->text());
+        std::string id = item->data(Qt::UserRole).toString().toStdString();
+
+        qDebug() << "current id: " << id;
+    });
+
+    // === Right (editor) ===
+    this->editor = new Editor(this);
+
+    connect(this->header, &Header::onRemoveNote, this, [this] {
+        Database& db = Database::instance();
+        DatabaseWorker dbWorker(db);
+
+        QListWidgetItem* currentItem = this->noteList->currentItem();
+
+        if (currentItem) {
+            const QString qid = currentItem->data(Qt::UserRole).toString();
+            if (qid.isEmpty()) {
+                qDebug() << "No id stored in item!";
+                return;
+            }
+            const std::string noteId = qid.toStdString();
+            qDebug() << "Request remove id =" << qid;
+
+            this->noteManager.remove(noteId);
+            dbWorker.removeNote(noteId);
+
+            delete this->noteList->takeItem(this->noteList->row(currentItem));
+        } else
+            qDebug() << "invalid item";
+    });
+
     connect(this->header, &Header::onAddNote, this, [this] {
         Database& db = Database::instance();
+        DatabaseWorker dbWorker(db);
 
         std::string content = this->editor->toPlainText().toStdString();
 
@@ -34,25 +74,14 @@ MainWindow::MainWindow(QWidget *parent)
         QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(note.title));
         item->setData(Qt::UserRole, QString::fromStdString(note.id));
 
-        db.insertNoteToDB(QString::fromStdString(note.id), QString::fromStdString(note.title), QString::fromStdString(note.content));
+        qDebug() << "new id: " << item->data(Qt::UserRole).toString();
+
+        dbWorker.addNote(note);
 
         this->noteList->addItem(item);
         this->noteList->setCurrentItem(item);
         this->editor->clear();
     });
-
-    // === Sidebar (categories) ===
-    this->catList = new CategoriesList(this);
-
-    // === Center (list of notes) ===
-    this->noteList = new NotesList(this);
-
-    connect(this->noteList, &NotesList::itemDoubleClicked, this, [this](QListWidgetItem* item) {
-        this->editor->setText(item->text());
-    });
-
-    // === Right (editor) ===
-    this->editor = new Editor(this);
 
     // === Splitters ===
     QSplitter* horizontalSplitter = new QSplitter(Qt::Horizontal);

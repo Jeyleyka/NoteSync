@@ -5,6 +5,8 @@
 #include <QVBoxLayout>
 #include <QListWidget>
 
+#include "../../Persistance/DatabaseWorker/DatabaseWorker.h"
+
 class NotesList : public QListWidget
 {
     Q_OBJECT

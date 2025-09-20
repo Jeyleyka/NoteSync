@@ -13,6 +13,7 @@ Header::Header(QWidget *parent)
     QAction* saveAction = toolBar->addAction("💾 Save");
 
     connect(addAction, &QAction::triggered, this, &Header::onAddNote);
+    connect(deleteAction, &QAction::triggered, this, &Header::onRemoveNote);
 
     toolBar->addSeparator();
     QLineEdit* searchBox = new QLineEdit();
