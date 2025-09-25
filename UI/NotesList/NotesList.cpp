@@ -4,7 +4,7 @@ NotesList::NotesList(QWidget* parent)
     : QListWidget(parent)
 {
     Database& db = Database::instance();
-    DatabaseWorker dbWorker(db);
+    DatabaseWorker dbWorker;
 
     for (auto& c : dbWorker.getAllNotes()) {
         QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(c.title));

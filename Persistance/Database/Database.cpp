@@ -36,7 +36,6 @@ bool Database::init() {
 
     QSqlQuery query;
 
-
     QString sql = R"(
         CREATE TABLE IF NOT EXISTS notes (
             id TEXT NOT NULL,

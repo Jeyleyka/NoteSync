@@ -11,6 +11,8 @@
 #include "../../Core/Note/Note.h"
 #include "../../Core/NoteManager/NoteManager.h"
 
+class NoteUI;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT

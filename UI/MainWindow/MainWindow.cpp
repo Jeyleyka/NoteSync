@@ -1,6 +1,9 @@
 #include "MainWindow.h"
 #include <QMainWindow>
 #include <QSplitter>
+#include <thread>
+
+#include "../NoteUI/NoteUI.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -21,8 +24,11 @@ MainWindow::MainWindow(QWidget *parent)
     this->header = new Header(this);
     this->addToolBar(header->getToolBar());
 
+
     // === Sidebar (categories) ===
     this->catList = new CategoriesList(this);
+
+    NoteUI* note = new NoteUI(QColor("#7F5F01"), "some", this);
 
     // === Center (list of notes) ===
     this->noteList = new NotesList(this);
@@ -38,54 +44,61 @@ MainWindow::MainWindow(QWidget *parent)
     this->editor = new Editor(this);
 
     connect(this->header, &Header::onRemoveNote, this, [this] {
-        Database& db = Database::instance();
-        DatabaseWorker dbWorker(db);
+        std::thread([this] {
+            DatabaseWorker dbWorker;
 
-        QListWidgetItem* currentItem = this->noteList->currentItem();
+            QListWidgetItem* currentItem = this->noteList->currentItem();
 
-        if (currentItem) {
-            const QString qid = currentItem->data(Qt::UserRole).toString();
-            if (qid.isEmpty()) {
-                qDebug() << "No id stored in item!";
-                return;
-            }
-            const std::string noteId = qid.toStdString();
-            qDebug() << "Request remove id =" << qid;
+            if (currentItem) {
+                const QString qid = currentItem->data(Qt::UserRole).toString();
+                if (qid.isEmpty()) {
+                    qDebug() << "No id stored in item!";
+                    return;
+                }
+                const std::string noteId = qid.toStdString();
 
-            this->noteManager.remove(noteId);
-            dbWorker.removeNote(noteId);
+                this->noteManager.remove(noteId);
+                dbWorker.removeNote(noteId);
 
-            delete this->noteList->takeItem(this->noteList->row(currentItem));
-        } else
-            qDebug() << "invalid item";
+                QMetaObject::invokeMethod(this, [this, currentItem] {
+                    delete this->noteList->takeItem(this->noteList->row(currentItem));
+                }, Qt::QueuedConnection);
+
+            } else
+                qDebug() << "invalid item";
+
+        }).detach();
     });
 
     connect(this->header, &Header::onAddNote, this, [this] {
-        Database& db = Database::instance();
-        DatabaseWorker dbWorker(db);
 
         std::string content = this->editor->toPlainText().toStdString();
 
         QStringList lines = this->editor->toPlainText().split("\n");
         std::string title = lines.isEmpty() ? "Untitled" : lines[0].toStdString();
 
-        const Note& note = noteManager.add(title, content);
+        std::thread([this, title, content] {
+            DatabaseWorker dbWorker;
 
-        QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(note.title));
-        item->setData(Qt::UserRole, QString::fromStdString(note.id));
+            const Note& note = noteManager.add(title, content);
 
-        qDebug() << "new id: " << item->data(Qt::UserRole).toString();
+            dbWorker.addNote(note);
 
-        dbWorker.addNote(note);
+            QMetaObject::invokeMethod(this, [this, &note] {
+                QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(note.title));
+                item->setData(Qt::UserRole, QString::fromStdString(note.id));
+                this->noteList->addItem(item);
+                this->noteList->setCurrentItem(item);
+                this->editor->clear();
+            }, Qt::QueuedConnection);
 
-        this->noteList->addItem(item);
-        this->noteList->setCurrentItem(item);
-        this->editor->clear();
+        }).detach();
     });
 
     // === Splitters ===
     QSplitter* horizontalSplitter = new QSplitter(Qt::Horizontal);
     horizontalSplitter->addWidget(this->catList);
+    horizontalSplitter->addWidget(note);
     horizontalSplitter->addWidget(this->noteList);
     horizontalSplitter->addWidget(this->editor);
 

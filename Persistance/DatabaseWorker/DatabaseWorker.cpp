@@ -6,10 +6,27 @@
 #include <QDebug>
 #include <QDateTime>
 
-DatabaseWorker::DatabaseWorker(Database& database) : db(database) {}
+DatabaseWorker::DatabaseWorker(const QString& connectionName)
+{
+    if (QSqlDatabase::contains(connectionName)) {
+        QSqlDatabase::removeDatabase(connectionName);
+    }
+
+    m_db = QSqlDatabase::addDatabase("QSQLITE", connectionName);
+    m_db.setDatabaseName("data.db");
+
+    if (!m_db.open()) {
+        qDebug() << "DB open error:" << m_db.lastError().text();
+    }
+}
 
 bool DatabaseWorker::addNote(const Note& note) {
-    QSqlQuery query;
+    if (!m_db.isOpen()) {
+        qDebug() << "DB not open in addNote()";
+        return false;
+    }
+
+    QSqlQuery query(m_db);
     query.prepare("INSERT INTO notes (id, title, content, created_at, modified_at) VALUES (?,?,?, datetime('now'), datetime('now'))");
 
     qDebug() << "id in db: " << note.id;
@@ -19,7 +36,7 @@ bool DatabaseWorker::addNote(const Note& note) {
     query.addBindValue(QString::fromStdString(note.content));
 
     if (!query.exec()) {
-        qDebug() << "Insert failed: " << query.lastError().text();
+        qDebug() << "Insert in db failed: " << query.lastError().text();
         return false;
     }
 
@@ -28,7 +45,7 @@ bool DatabaseWorker::addNote(const Note& note) {
 
 std::vector<Note> DatabaseWorker::getAllNotes() {
     std::vector<Note> notes;
-    QSqlQuery query(db.database());
+    QSqlQuery query(m_db);
     query.exec("SELECT id, title, content FROM notes");
 
     while (query.next()) {
@@ -44,7 +61,7 @@ std::vector<Note> DatabaseWorker::getAllNotes() {
 }
 
 bool DatabaseWorker::updateNote(const Note& note) {
-    QSqlQuery query(db.database());
+    QSqlQuery query(m_db);
     query.prepare("UPDATE notes SET title = :title, content = :content, modified_at = :modified_at WHERE id = :id");
 
     query.bindValue(":title", QString::fromStdString(note.title));
@@ -63,7 +80,7 @@ bool DatabaseWorker::updateNote(const Note& note) {
 }
 
 bool DatabaseWorker::removeNote(const std::string& id) {
-    QSqlQuery query(db.database());
+    QSqlQuery query(m_db);
     query.prepare("DELETE FROM notes WHERE id = :id");
 
     query.bindValue(":id", QString::fromStdString(id));
@@ -77,7 +94,7 @@ bool DatabaseWorker::removeNote(const std::string& id) {
 }
 
 std::optional<Note> DatabaseWorker::getNoteById(const std::string& id) {
-    QSqlQuery query(db.database());
+    QSqlQuery query(m_db);
     query.prepare("SELECT id, title, content, FROM notes WHERE id = :id");
 
     query.bindValue(":id", QString::fromStdString(id));

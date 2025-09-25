@@ -12,7 +12,7 @@
 class DatabaseWorker
 {
 public:
-    explicit DatabaseWorker(Database& database);
+    explicit DatabaseWorker(const QString& connectionName = "WorkerConnection");
 
     bool addNote(const Note& note);
     std::vector<Note> getAllNotes();
@@ -21,7 +21,7 @@ public:
     std::optional<Note> getNoteById(const std::string& id);
 
 private:
-    Database& db;
+    QSqlDatabase m_db;
 };
 
 #endif // DATABASEWORKER_H

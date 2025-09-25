@@ -13,10 +13,13 @@ const Note& NoteManager::add(const std::string& title, const std::string& conten
 }
 
 bool NoteManager::remove(const std::string& id) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return this->notes.erase(id) > 0;
 }
 
 bool NoteManager::update(const std::string& id, const std::string& newTitle, const std::string& newContent) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = this->notes.find(id);
 
     if (it == this->notes.end()) {
