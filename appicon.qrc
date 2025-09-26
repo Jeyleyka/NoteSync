@@ -1,5 +1,9 @@
 <RCC>
     <qresource prefix="/">
         <file>Resources/edit.svg</file>
+        <file>Resources/empty-check.svg</file>
+        <file>Resources/full-check.svg</file>
+        <file>Resources/changeCover.svg</file>
+        <file>Resources/openCard.svg</file>
     </qresource>
 </RCC>

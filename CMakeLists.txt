@@ -31,6 +31,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         Persistance/DatabaseWorker/DatabaseWorker.h Persistance/DatabaseWorker/DatabaseWorker.cpp
         UI/NoteUI/NoteUI.h UI/NoteUI/NoteUI.cpp
         appicon.qrc
+        UI/CardEdit/CardEdit.h UI/CardEdit/CardEdit.cpp
 
 
 
