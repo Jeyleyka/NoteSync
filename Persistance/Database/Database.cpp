@@ -39,6 +39,7 @@ bool Database::init() {
     QString sql = R"(
         CREATE TABLE IF NOT EXISTS notes (
             id TEXT NOT NULL,
+            color TEXT,
             title TEXT,
             content TEXT,
             created_at TEXT,

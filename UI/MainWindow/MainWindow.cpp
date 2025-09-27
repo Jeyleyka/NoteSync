@@ -28,67 +28,57 @@ MainWindow::MainWindow(QWidget *parent)
     // === Sidebar (categories) ===
     this->catList = new CategoriesList(this);
 
-    NoteUI* note = new NoteUI(QColor("#7F5F01"), "some", this);
-
     // === Center (list of notes) ===
     this->noteList = new NotesList(this);
 
-    connect(this->noteList, &NotesList::itemDoubleClicked, this, [this](QListWidgetItem* item) {
-        this->editor->setText(item->text());
-        std::string id = item->data(Qt::UserRole).toString().toStdString();
-
-        qDebug() << "current id: " << id;
-    });
+    this->noteList->loadNotes();
 
     // === Right (editor) ===
     this->editor = new Editor(this);
 
-    connect(this->header, &Header::onRemoveNote, this, [this] {
-        std::thread([this] {
-            DatabaseWorker dbWorker;
+    // connect(this->header, &Header::onRemoveNote, this, [this] {
+    //     std::thread([this] {
+    //         DatabaseWorker dbWorker;
 
-            QListWidgetItem* currentItem = this->noteList->currentItem();
+    //         QListWidgetItem* currentItem = this->noteList->currentItem();
 
-            if (currentItem) {
-                const QString qid = currentItem->data(Qt::UserRole).toString();
-                if (qid.isEmpty()) {
-                    qDebug() << "No id stored in item!";
-                    return;
-                }
-                const std::string noteId = qid.toStdString();
+    //         if (currentItem) {
+    //             const QString qid = currentItem->data(Qt::UserRole).toString();
+    //             if (qid.isEmpty()) {
+    //                 qDebug() << "No id stored in item!";
+    //                 return;
+    //             }
+    //             const std::string noteId = qid.toStdString();
 
-                this->noteManager.remove(noteId);
-                dbWorker.removeNote(noteId);
+    //             this->noteManager.remove(noteId);
+    //             dbWorker.removeNote(noteId);
 
-                QMetaObject::invokeMethod(this, [this, currentItem] {
-                    delete this->noteList->takeItem(this->noteList->row(currentItem));
-                }, Qt::QueuedConnection);
+    //             QMetaObject::invokeMethod(this, [this, currentItem] {
+    //                 delete this->noteList->takeItem(this->noteList->row(currentItem));
+    //             }, Qt::QueuedConnection);
 
-            } else
-                qDebug() << "invalid item";
+    //         } else
+    //             qDebug() << "invalid item";
 
-        }).detach();
-    });
+    //     }).detach();
+    // });
 
     connect(this->header, &Header::onAddNote, this, [this] {
-
         std::string content = this->editor->toPlainText().toStdString();
 
         QStringList lines = this->editor->toPlainText().split("\n");
         std::string title = lines.isEmpty() ? "Untitled" : lines[0].toStdString();
+        std::string color = "#7F5F01";
 
-        std::thread([this, title, content] {
+        std::thread([this, title, color, content] {
             DatabaseWorker dbWorker;
 
-            const Note& note = noteManager.add(title, content);
+            const Note& note = noteManager.add(title, color, content);
 
             dbWorker.addNote(note);
 
             QMetaObject::invokeMethod(this, [this, &note] {
-                QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(note.title));
-                item->setData(Qt::UserRole, QString::fromStdString(note.id));
-                this->noteList->addItem(item);
-                this->noteList->setCurrentItem(item);
+                this->noteList->addNote(QColor("#7F5F01"), QString::fromStdString(note.title));
                 this->editor->clear();
             }, Qt::QueuedConnection);
 
@@ -98,7 +88,6 @@ MainWindow::MainWindow(QWidget *parent)
     // === Splitters ===
     QSplitter* horizontalSplitter = new QSplitter(Qt::Horizontal);
     horizontalSplitter->addWidget(this->catList);
-    horizontalSplitter->addWidget(note);
     horizontalSplitter->addWidget(this->noteList);
     horizontalSplitter->addWidget(this->editor);
 

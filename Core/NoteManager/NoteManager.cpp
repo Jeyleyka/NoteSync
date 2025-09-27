@@ -4,9 +4,9 @@
 
 NoteManager::NoteManager() {}
 
-const Note& NoteManager::add(const std::string& title, const std::string& content) {
+const Note& NoteManager::add(const std::string& title, const std::string& color, const std::string& content) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    auto newNote = std::make_unique<Note>(title, content);
+    auto newNote = std::make_unique<Note>(title, color, content);
     auto id = newNote->id;
     this->notes.emplace(id, std::move(newNote));
     return *this->notes.at(id);
@@ -17,7 +17,7 @@ bool NoteManager::remove(const std::string& id) {
     return this->notes.erase(id) > 0;
 }
 
-bool NoteManager::update(const std::string& id, const std::string& newTitle, const std::string& newContent) {
+bool NoteManager::update(const std::string& id, const std::string& newTitle, const std::string& newColor, const std::string& newContent) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto it = this->notes.find(id);
@@ -29,6 +29,7 @@ bool NoteManager::update(const std::string& id, const std::string& newTitle, con
 
     auto& note = it->second;
     note->title = newTitle;
+    note->color = newColor;
     note->content = newContent;
     return true;
 }

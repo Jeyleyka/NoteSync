@@ -27,12 +27,13 @@ bool DatabaseWorker::addNote(const Note& note) {
     }
 
     QSqlQuery query(m_db);
-    query.prepare("INSERT INTO notes (id, title, content, created_at, modified_at) VALUES (?,?,?, datetime('now'), datetime('now'))");
+    query.prepare("INSERT INTO notes (id, title, color, content, created_at, modified_at) VALUES (?,?,?,?, datetime('now'), datetime('now'))");
 
     qDebug() << "id in db: " << note.id;
 
     query.addBindValue(QString::fromStdString(note.id));
     query.addBindValue(QString::fromStdString(note.title));
+    query.addBindValue(QString::fromStdString(note.color));
     query.addBindValue(QString::fromStdString(note.content));
 
     if (!query.exec()) {
@@ -46,12 +47,13 @@ bool DatabaseWorker::addNote(const Note& note) {
 std::vector<Note> DatabaseWorker::getAllNotes() {
     std::vector<Note> notes;
     QSqlQuery query(m_db);
-    query.exec("SELECT id, title, content FROM notes");
+    query.exec("SELECT id, title, color, content FROM notes");
 
     while (query.next()) {
         Note note(
             query.value(1).toString().toStdString(),
-            query.value(2).toString().toStdString()
+            query.value(2).toString().toStdString(),
+            query.value(3).toString().toStdString()
         );
         note.id = query.value(0).toString().toStdString();
         notes.push_back(std::move(note));
@@ -62,9 +64,10 @@ std::vector<Note> DatabaseWorker::getAllNotes() {
 
 bool DatabaseWorker::updateNote(const Note& note) {
     QSqlQuery query(m_db);
-    query.prepare("UPDATE notes SET title = :title, content = :content, modified_at = :modified_at WHERE id = :id");
+    query.prepare("UPDATE notes SET title = :title, color = :color, content = :content, modified_at = :modified_at WHERE id = :id");
 
     query.bindValue(":title", QString::fromStdString(note.title));
+    query.bindValue(":color", QString::fromStdString(note.color));
     query.bindValue(":content", QString::fromStdString(note.content));
 
     QString modfiedTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
@@ -95,7 +98,7 @@ bool DatabaseWorker::removeNote(const std::string& id) {
 
 std::optional<Note> DatabaseWorker::getNoteById(const std::string& id) {
     QSqlQuery query(m_db);
-    query.prepare("SELECT id, title, content, FROM notes WHERE id = :id");
+    query.prepare("SELECT id, title, color, content, FROM notes WHERE id = :id");
 
     query.bindValue(":id", QString::fromStdString(id));
 
@@ -107,7 +110,8 @@ std::optional<Note> DatabaseWorker::getNoteById(const std::string& id) {
     if (query.next()) {
         Note note(
             query.value(1).toString().toStdString(),
-            query.value(2).toString().toStdString()
+            query.value(2).toString().toStdString(),
+            query.value(3).toString().toStdString()
         );
         note.id = query.value(0).toString().toStdString();
         return note;

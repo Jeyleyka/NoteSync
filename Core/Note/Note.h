@@ -9,11 +9,12 @@ struct Note
 {    
     std::string id;
     std::string title;
+    std::string color;
     std::string content;
     std::chrono::system_clock::time_point createdAt;
     std::chrono::system_clock::time_point modifiedAt;
 
-    Note(std::string t = {}, std::string c = {});
+    Note(std::string t = {}, std::string cl = {}, std::string c = {});
 
     // move-semanic
     Note(Note&&) noexcept = default;

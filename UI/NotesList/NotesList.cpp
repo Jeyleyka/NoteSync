@@ -1,14 +1,29 @@
 #include "NotesList.h"
 
+#include <QVBoxLayout>
+
 NotesList::NotesList(QWidget* parent)
-    : QListWidget(parent)
+    : QWidget(parent)
 {
-    Database& db = Database::instance();
+    layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(10);
+    layout->addStretch();
+}
+
+void NotesList::addNote(const QColor &color, const QString &text) {
+    auto* note = new NoteUI(color, text, this);
+    notes.push_back(note);
+
+    layout->insertWidget(layout->count() - 1, note);
+}
+
+void NotesList::loadNotes() {
     DatabaseWorker dbWorker;
 
     for (auto& c : dbWorker.getAllNotes()) {
-        QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(c.title));
-        item->setData(Qt::UserRole, QString::fromStdString(c.id));
-        addItem(item);
+        auto* note = new NoteUI(QColor(QString::fromStdString(c.color)), QString::fromStdString(c.title), this);
+        notes.push_back(note);
+        layout->insertWidget(layout->count() - 1, note);
     }
 }
