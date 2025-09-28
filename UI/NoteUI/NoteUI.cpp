@@ -9,7 +9,7 @@
 #include "../CardEdit/CardEdit.h"
 
 NoteUI::NoteUI(const QString& id, const QColor& color, const QString& text, QWidget* parent)
-    : QWidget(parent), id(id), noteText(text)
+    : QWidget(parent), id(id), color(color), noteText(text)
 {
     qApp->installEventFilter(this);
     container = new QWidget(this);
@@ -215,9 +215,21 @@ bool NoteUI::eventFilter(QObject *watched, QEvent *event) {
         if (!this->rect().contains(this->mapFromGlobal(mouseEvent->globalPosition().toPoint()))) {
             finishEditing();
         }
+    } else if (watched == container && event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+
+        if (this->rect().contains(this->mapFromGlobal(mouseEvent->globalPosition().toPoint())))
+            emit showInterface(id, color, noteText);
     }
 
     return QWidget::eventFilter(watched, event);
+}
+
+void NoteUI::mousePressEvent(QMouseEvent *event) {
+    if (container->rect().contains(container->mapFromParent(event->pos()))) {
+        emit showInterface(id, color, noteText);
+    }
+    QWidget::mousePressEvent(event);
 }
 
 void NoteUI::startEditing() {

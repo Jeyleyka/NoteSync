@@ -4,6 +4,7 @@
 #include <thread>
 
 #include "../NoteUI/NoteUI.h"
+#include "../NoteInterface/NoteInterface.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -42,6 +43,12 @@ MainWindow::MainWindow(QWidget *parent)
 
         dbWorker.updateNote(noteModel);
     });
+
+    // connect(this->noteList, &NotesList::onShowInterface, this, [this](const QString& id, const QColor& color, const QString& title) {
+    //     NoteInterface* interface = new NoteInterface(id, color, title, "", this);
+    //     interface->show();
+    // });
+
     // === Right (editor) ===
     this->editor = new Editor(this);
 

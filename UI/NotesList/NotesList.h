@@ -20,6 +20,7 @@ public:
 
 signals:
     void onSaveNoteChanges(NoteUI& note);
+    void onShowInterface(const QString& id, const QColor& color, const QString& title);
 
 private:
     NoteUI* editingNote = nullptr;

@@ -33,9 +33,11 @@ signals:
     void saveChanges(NoteUI& note);
     void editingStarted(NoteUI* note);
     void editingFinished(NoteUI* note);
+    void showInterface(const QString& id, const QColor& color, const QString& title);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
     void finishEditing();
@@ -49,6 +51,8 @@ private:
     QVector<CardEdit*> cards;
 
     QLabel* text_m;
+
+    QColor color;
 
     QTextEdit* textEdit;
     QString id;

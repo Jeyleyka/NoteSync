@@ -5,5 +5,9 @@
         <file>Resources/full-check.svg</file>
         <file>Resources/changeCover.svg</file>
         <file>Resources/openCard.svg</file>
+        <file>Resources/dots.svg</file>
+        <file>Resources/img.svg</file>
+        <file>Resources/close.svg</file>
+        <file>Resources/plus.svg</file>
     </qresource>
 </RCC>

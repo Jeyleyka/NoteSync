@@ -2,6 +2,8 @@
 
 #include <QVBoxLayout>
 
+#include "../NoteInterface/NoteInterface.h"
+
 NotesList::NotesList(QWidget* parent)
     : QWidget(parent)
 {
@@ -24,6 +26,13 @@ void NotesList::loadNotes() {
     for (auto& c : dbWorker.getAllNotes()) {
         auto* note = new NoteUI(QString::fromStdString(c.id), QColor(QString::fromStdString(c.color)), QString::fromStdString(c.title), this);
         connect(note, &NoteUI::saveChanges, this, &NotesList::onSaveNoteChanges);
+        connect(note, &NoteUI::showInterface, this, [this](const QString& id, const QColor& color, const QString& title) {
+            auto* iface = new NoteInterface(id, color, title, "");
+            iface->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+            iface->setAttribute(Qt::WA_TranslucentBackground); // если хочешь прозрачные края
+            iface->setAttribute(Qt::WA_DeleteOnClose);         // удаляем при закрытии
+            iface->show();
+        });
 
         notes.push_back(note);
         layout->insertWidget(layout->count() - 1, note);
