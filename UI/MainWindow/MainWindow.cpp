@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     Database& db = Database::instance();
+    // this->setAttribute(Qt::WA_TranslucentBackground, true);
 
     if (!db.isOpen()) {
         qDebug() << "Не удалось открыть БД!";
@@ -30,9 +31,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     // === Center (list of notes) ===
     this->noteList = new NotesList(this);
-
     this->noteList->loadNotes();
+    connect(this->noteList, &NotesList::onSaveNoteChanges, this, [this](NoteUI& note) {
+        DatabaseWorker dbWorker;
 
+        Note noteModel;
+        noteModel.id = note.getId().toStdString();
+        // noteModel.color = note.getColor().name().toStdString();
+        noteModel.title = note.getText().toStdString();
+
+        dbWorker.updateNote(noteModel);
+    });
     // === Right (editor) ===
     this->editor = new Editor(this);
 
@@ -64,25 +73,32 @@ MainWindow::MainWindow(QWidget *parent)
     // });
 
     connect(this->header, &Header::onAddNote, this, [this] {
-        std::string content = this->editor->toPlainText().toStdString();
+        if (!this->editor->toPlainText().isEmpty())
+        {
+            std::string content = this->editor->toPlainText().toStdString();
 
-        QStringList lines = this->editor->toPlainText().split("\n");
-        std::string title = lines.isEmpty() ? "Untitled" : lines[0].toStdString();
-        std::string color = "#7F5F01";
+            QStringList lines = this->editor->toPlainText().split("\n");
+            std::string title = lines.isEmpty() ? "Untitled" : lines[0].toStdString();
+            std::string color = "#7F5F01";
 
-        std::thread([this, title, color, content] {
-            DatabaseWorker dbWorker;
+            std::thread([this, title, color, content] {
+                DatabaseWorker dbWorker;
 
-            const Note& note = noteManager.add(title, color, content);
+                const Note& note = noteManager.add(title, color, content);
 
-            dbWorker.addNote(note);
+                dbWorker.addNote(note);
 
-            QMetaObject::invokeMethod(this, [this, &note] {
-                this->noteList->addNote(QColor("#7F5F01"), QString::fromStdString(note.title));
-                this->editor->clear();
-            }, Qt::QueuedConnection);
+                QMetaObject::invokeMethod(this, [this, &note] {
+                    this->noteList->addNote(QString::fromStdString(note.id), QColor("#7F5F01"), QString::fromStdString(note.title));
+                    this->editor->clear();
+                }, Qt::QueuedConnection);
 
-        }).detach();
+
+            }).detach();
+        } else {
+            qDebug() << "area is empty";
+            return;
+        }
     });
 
     // === Splitters ===
@@ -99,3 +115,9 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() {}
+
+void MainWindow::resizeEvent(QResizeEvent* event) {
+    // QMainWindow::resizeEvent(event);
+    // if (overlay)
+    //     overlay->setGeometry(this->rect());
+}

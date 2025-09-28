@@ -15,12 +15,17 @@ class NotesList : public QWidget
 public:
     explicit NotesList(QWidget* parent = nullptr);
 
-    void addNote(const QColor& color, const QString& text);
+    void addNote(const QString& id, const QColor& color, const QString& text);
     void loadNotes();
-    // void clearNotes();
+
+signals:
+    void onSaveNoteChanges(NoteUI& note);
 
 private:
+    NoteUI* editingNote = nullptr;
+
     QVBoxLayout* layout;
+
     QVector<NoteUI*> notes;
 };
 

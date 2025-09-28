@@ -4,12 +4,14 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QKeyEvent>
+#include <QResizeEvent>
 
 #include "../CardEdit/CardEdit.h"
 
-NoteUI::NoteUI(const QColor& color, const QString& text, QWidget* parent)
-    : QWidget(parent)
+NoteUI::NoteUI(const QString& id, const QColor& color, const QString& text, QWidget* parent)
+    : QWidget(parent), id(id), noteText(text)
 {
+    qApp->installEventFilter(this);
     container = new QWidget(this);
     container->installEventFilter(this);
     container->setFixedSize(256, 84);
@@ -56,7 +58,7 @@ NoteUI::NoteUI(const QColor& color, const QString& text, QWidget* parent)
         }
     });
 
-    text_m = new QLabel(text, this);
+    text_m = new QLabel(noteText, this);
     text_m->setStyleSheet("font-size: 15px; color: #fff");
 
     textEdit = new QTextEdit(this);
@@ -78,16 +80,15 @@ NoteUI::NoteUI(const QColor& color, const QString& text, QWidget* parent)
     saveEditing->setHidden(true);
 
     connect(saveEditing, &QPushButton::clicked, this, [this] {
-        changing = false;
+        QString newText = textEdit->toPlainText().trimmed(); // trim чтобы не оставить "   "
 
-        for (auto& c : cards)
-            c->setHidden(true);
+        if (newText.isEmpty())
+            return;
 
-        container->setFixedSize(256, 84);
-        text_m->setText(textEdit->toPlainText());
-        text_m->setHidden(false);
-        textEdit->setHidden(true);
-        saveEditing->setHidden(true);
+        noteText = newText;
+        finishEditing();
+
+        emit saveChanges(*this);
     });
 
     containerLayout->addWidget(buttonWidget);
@@ -96,18 +97,20 @@ NoteUI::NoteUI(const QColor& color, const QString& text, QWidget* parent)
     for (auto& c : cards)
         c->setHidden(true);
 
-
     connect(changeNote, &QPushButton::clicked, this, [this] {
+        emit editingStarted(this);
+
         changing = true;
 
         for (auto& c : cards)
             c->setHidden(false);
 
-        textEdit->setText(text_m->text());
+        textEdit->setText(noteText);
         textEdit->selectAll();
         text_m->setHidden(true);
         check->setHidden(true);
         textEdit->setHidden(false);
+        textEdit->setFocus();
         saveEditing->setHidden(false);
         container->setFixedSize(256, 130);
     });
@@ -143,6 +146,22 @@ void NoteUI::initCards() {
     cards.push_back(changeCover);
 }
 
+QString& NoteUI::getId() {
+    return this->id;
+}
+
+// QColor& NoteUI::getColor() {
+//     // return QColor("");
+// }
+
+QString& NoteUI::getText() {
+    return noteText;
+}
+
+void NoteUI::setEditEnabled(bool enabled) {
+    changeNote->setEnabled(enabled);
+}
+
 bool NoteUI::eventFilter(QObject *watched, QEvent *event) {
     if (watched == container) {
         if (event->type() == QEvent::Enter) {
@@ -153,6 +172,7 @@ bool NoteUI::eventFilter(QObject *watched, QEvent *event) {
                                      "#btnContainer {"
                                      " border-radius: 5px;"
                                      "}");
+
             changeNote->setHidden(false);
 
             if (!changing)
@@ -176,21 +196,47 @@ bool NoteUI::eventFilter(QObject *watched, QEvent *event) {
 
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
             if (changing) {
-                changing = false;
+                QString newText = textEdit->toPlainText().trimmed();
 
-                for (auto& c : cards)
-                    c->setHidden(true);
+                if (newText.isEmpty())
+                    return true;
 
-                container->setFixedSize(256, 84);
-                text_m->setText(textEdit->toPlainText());
-                text_m->setHidden(false);
-                textEdit->setHidden(true);
-                saveEditing->setHidden(true);
+                noteText = textEdit->toPlainText();
+                finishEditing();
+                emit saveChanges(*this);
 
                 return true;
             }
         }
+    } else if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+
+        // если кликнули не внутри NoteUI
+        if (!this->rect().contains(this->mapFromGlobal(mouseEvent->globalPosition().toPoint()))) {
+            finishEditing();
+        }
     }
 
     return QWidget::eventFilter(watched, event);
+}
+
+void NoteUI::startEditing() {
+    changing = true;
+    textEdit->setHidden(false);
+    text_m->setHidden(true);
+    saveEditing->setHidden(false);
+}
+
+void NoteUI::finishEditing() {
+    changing = false;
+
+    for (auto& c : cards)
+        c->setHidden(true);
+
+    container->setFixedSize(256, 84);
+    text_m->setText(noteText);
+    text_m->setHidden(false);
+    textEdit->setHidden(true);
+    saveEditing->setHidden(true);
+    emit editingFinished(this);
 }
